@@ -62,6 +62,7 @@ public final class WarPracticeCore extends JavaPlugin {
         EntityClear entityClear = new EntityClear(this);
         entityClear.startClearSchedule();
     }
+
     private void registerCommands() {
         CommandManager.register(this,
                 "setspawn", SetSpawnCommand.class,
