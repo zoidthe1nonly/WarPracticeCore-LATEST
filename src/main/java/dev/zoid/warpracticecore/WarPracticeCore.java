@@ -7,10 +7,6 @@ import dev.zoid.warpracticecore.events.*;
 import dev.zoid.warpracticecore.placeholders.TierPlaceholder;
 import dev.zoid.warpracticecore.storage.SpawnData;
 import dev.zoid.warpracticecore.utils.*;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class WarPracticeCore extends JavaPlugin {
@@ -22,43 +18,50 @@ public final class WarPracticeCore extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        initialize();
+        register();
+        loadWorlds();
+        setupPlaceholders();
+        startTasks();
+    }
+
+    private void initialize() {
         initializeDatabase();
-
-        getCommand("tier").setTabCompleter(new dev.zoid.warpracticecore.commands.TierTabCompleter(tierUtil));
-
         SpawnData.init();
+        CommandRunner.init(this);
+        Region.initialize(this);
+        Region.loadRegions();
+        RtpQueueUtil.preloadRandomLocations();
+        RtpUtil.initialize(this);
+    }
+
+    private void register() {
         registerCommands();
         registerEvents();
+    }
 
+    private void loadWorlds() {
         WorldUtil.loadWorld("spawn");
         WorldUtil.loadWorld("desert");
         WorldUtil.loadWorld("badlands");
         WorldUtil.loadWorld("plains");
         WorldUtil.loadWorld("flat");
         WorldUtil.loadWorld("box");
+    }
 
+    private void setupPlaceholders() {
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new TierPlaceholder(tierUtil).register();
         } else {
             getLogger().warning("PlaceholderAPI not found! Tier placeholders will not work.");
         }
+    }
 
+    private void startTasks() {
         getServer().getPluginManager().registerEvents(new DeathEvent(tierUtil), this);
-
-        CommandRunner.init(this);
-
-        Region.initialize(this);
-        Region.loadRegions();
-
-        RtpQueueUtil.preloadRandomLocations();
-        RtpUtil.initialize(this);
-
         EntityClear entityClear = new EntityClear(this);
         entityClear.startClearSchedule();
-
-      }
-
-
+    }
     private void registerCommands() {
         CommandManager.register(this,
                 "setspawn", SetSpawnCommand.class,
@@ -80,11 +83,11 @@ public final class WarPracticeCore extends JavaPlugin {
                 "region", RegionCommand.class,
                 "broadcast", BroadcastCommand.class
         );
+        getCommand("tier").setTabCompleter(new dev.zoid.warpracticecore.commands.TierTabCompleter(tierUtil));
     }
 
-
     private void registerEvents() {
-        EventManager.register(WarPracticeCore.plugin(),
+        EventManager.register(this,
                 JoinEvent.class,
                 LeaveEvent.class,
                 BlockProtection.class,
@@ -112,14 +115,17 @@ public final class WarPracticeCore extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        sqlite.close();
+        shutdown();
+    }
+
+    private void shutdown() {
+        if (sqlite != null) {
+            sqlite.close();
+        }
         instance = null;
         Region.saveRegions();
-
         EntityClear entityClear = new EntityClear(this);
         entityClear.stopClearSchedule();
-
-
     }
 
     public static WarPracticeCore plugin() {
@@ -130,5 +136,3 @@ public final class WarPracticeCore extends JavaPlugin {
         return tierUtil;
     }
 }
-
-
