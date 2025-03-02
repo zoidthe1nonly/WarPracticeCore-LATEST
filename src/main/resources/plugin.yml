@@ -41,3 +41,7 @@ commands:
   region:
     usage: /region
     permission: warpracticecore.region
+  broadcast:
+    usage: /<command> <args.length == >1>
+    permission: warpractice.broadcast
+    aliases: [bc, announce]

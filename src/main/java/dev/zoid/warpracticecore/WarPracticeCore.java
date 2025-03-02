@@ -77,7 +77,9 @@ public final class WarPracticeCore extends JavaPlugin {
                 "back", TpaCommands.class,
                 "tier", TierCommand.class,
                 "tierlist", TierlistCommand.class,
-                "region", RegionCommand.class);
+                "region", RegionCommand.class,
+                "broadcast", BroadcastCommand.class
+        );
     }
 
 
@@ -94,7 +96,8 @@ public final class WarPracticeCore extends JavaPlugin {
                 Chat.class,
                 InventoryEvents.class,
                 RegionEventListener.class,
-                RegionCommand.class);
+                RegionCommand.class
+        );
     }
 
     private void initializeDatabase() {
