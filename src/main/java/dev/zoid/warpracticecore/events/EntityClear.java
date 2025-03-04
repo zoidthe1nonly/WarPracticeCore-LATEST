@@ -46,7 +46,5 @@ public class EntityClear {
                 }
             }
         }
-
-        Bukkit.broadcastMessage("§e[WarPractice] §cCleared §e" + count + " §citem drops from the ground.");
     }
 }

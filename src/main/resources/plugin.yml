@@ -45,3 +45,17 @@ commands:
     usage: /<command> <args.length == >1>
     permission: warpractice.broadcast
     aliases: [bc, announce]
+  event:
+    usage: /<command>
+  eventannounce:
+    usage: /<command>
+    permission: warpractice.event.announce
+  eventstop:
+    usage: /<command>
+    permission: warpractice.event.stop
+  eventstart:
+    usage: /<command>
+    permission: warpractice.event.start
+  eventannouncecancel:
+    usage: /<command>
+    permission: warpractice.event.announcecancel

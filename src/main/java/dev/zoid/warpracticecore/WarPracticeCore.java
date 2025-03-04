@@ -6,7 +6,9 @@ import dev.zoid.warpracticecore.design.Chat;
 import dev.zoid.warpracticecore.events.*;
 import dev.zoid.warpracticecore.placeholders.TierPlaceholder;
 import dev.zoid.warpracticecore.storage.SpawnData;
+import dev.zoid.warpracticecore.topic_events.utils.events.PlayerListener;
 import dev.zoid.warpracticecore.utils.*;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class WarPracticeCore extends JavaPlugin {
@@ -23,6 +25,7 @@ public final class WarPracticeCore extends JavaPlugin {
         loadWorlds();
         setupPlaceholders();
         startTasks();
+        Bukkit.getPluginManager().registerEvents(new PlayerListener(), this);
     }
 
     private void initialize() {
@@ -38,6 +41,8 @@ public final class WarPracticeCore extends JavaPlugin {
     private void register() {
         registerCommands();
         registerEvents();
+        dev.zoid.warpracticecore.topic_events.utils.EventManager.setEventWorld(Bukkit.getWorld("events"));
+
     }
 
     private void loadWorlds() {
@@ -47,6 +52,7 @@ public final class WarPracticeCore extends JavaPlugin {
         WorldUtil.loadWorld("plains");
         WorldUtil.loadWorld("flat");
         WorldUtil.loadWorld("box");
+        WorldUtil.loadWorld("events");
     }
 
     private void setupPlaceholders() {
@@ -58,7 +64,7 @@ public final class WarPracticeCore extends JavaPlugin {
     }
 
     private void startTasks() {
-        getServer().getPluginManager().registerEvents(new DeathEvent(tierUtil), this);
+        getServer().getPluginManager().registerEvents(new DeathEvent(tierUtil, this), this);
         EntityClear entityClear = new EntityClear(this);
         entityClear.startClearSchedule();
     }
@@ -82,8 +88,13 @@ public final class WarPracticeCore extends JavaPlugin {
                 "tier", TierCommand.class,
                 "tierlist", TierlistCommand.class,
                 "region", RegionCommand.class,
-                "broadcast", BroadcastCommand.class
+                "broadcast", BroadcastCommand.class,
+                "event", dev.zoid.warpracticecore.topic_events.utils.commands.EventCommand.class,
+                "eventannounce", dev.zoid.warpracticecore.topic_events.utils.commands.EventAnnounceCommand.class,
+                "eventannouncecancel", dev.zoid.warpracticecore.topic_events.utils.commands.EventCancelAnnounceCommand.class,
+                "eventstart", dev.zoid.warpracticecore.topic_events.utils.commands.EventStartCommand.class
         );
+        getCommand("eventstop").setExecutor(new dev.zoid.warpracticecore.topic_events.utils.commands.EventStopCommand(this));
         getCommand("tier").setTabCompleter(new dev.zoid.warpracticecore.commands.TierTabCompleter(tierUtil));
     }
 
@@ -117,6 +128,7 @@ public final class WarPracticeCore extends JavaPlugin {
     @Override
     public void onDisable() {
         shutdown();
+        dev.zoid.warpracticecore.topic_events.utils.EventManager.stopEvent();
     }
 
     private void shutdown() {

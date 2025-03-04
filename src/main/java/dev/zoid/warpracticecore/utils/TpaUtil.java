@@ -168,7 +168,7 @@ public final class TpaUtil {
             player.sendMessage(miniMessage.deserialize("<red>No death location found."));
             return;
         }
-        player.teleport(location);
+        player.teleportAsync(location);
         player.sendMessage(miniMessage.deserialize("<#e6b8aa>You have been teleported to your death location."));
     }
 

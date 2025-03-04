@@ -2,23 +2,24 @@ package dev.zoid.warpracticecore.utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Region {
+public class Region implements Serializable {
     private final String name;
-    private final Location point1;
-    private final Location point2;
+    private transient Location point1; // Marked as transient
+    private transient Location point2; // Marked as transient
 
     private static final ConcurrentHashMap<String, Region> regions = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Player, Pair<Location, Location>> selectors = new ConcurrentHashMap<>();
@@ -68,11 +69,7 @@ public class Region {
         file.getParentFile().mkdirs();
 
         try (ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file))) {
-            for (Region region : regions.values()) {
-                outputStream.writeObject(region.name);
-                outputStream.writeObject(serializeLocation(region.point1));
-                outputStream.writeObject(serializeLocation(region.point2));
-            }
+            outputStream.writeObject(regions);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -83,37 +80,17 @@ public class Region {
         if (!file.exists()) return;
 
         try (ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file))) {
-            while (true) {
-                try {
-                    String name = (String) inputStream.readObject();
-                    String point1Str = (String) inputStream.readObject();
-                    String point2Str = (String) inputStream.readObject();
-                    Location point1 = deserializeLocation(point1Str);
-                    Location point2 = deserializeLocation(point2Str);
-                    regions.put(name, new Region(name, point1, point2));
-                } catch (EOFException e) {
-                    break;
-                }
+            Object loadedRegions = inputStream.readObject();
+            if (loadedRegions instanceof ConcurrentHashMap) {
+                regions.putAll((ConcurrentHashMap<String, Region>) loadedRegions);
             }
+        } catch (EOFException e) {
+            System.err.println("EOFException caught during region loading. The file may be corrupted or empty.");
+            e.printStackTrace();
+            regions.clear();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-    }
-
-    private static String serializeLocation(Location location) {
-        return location.getWorld().getName() + "," + location.getX() + "," + location.getY() + "," + location.getZ() + "," + location.getYaw() + "," + location.getPitch();
-    }
-
-    private static Location deserializeLocation(String serialized) {
-        String[] parts = serialized.split(",");
-        String worldName = parts[0];
-        double x = Double.parseDouble(parts[1]);
-        double y = Double.parseDouble(parts[2]);
-        double z = Double.parseDouble(parts[3]);
-        float yaw = Float.parseFloat(parts[4]);
-        float pitch = Float.parseFloat(parts[5]);
-
-        return new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
     }
 
     public boolean contains(Location location) {
@@ -162,6 +139,81 @@ public class Region {
         }
     }
 
+    public void handleBlockBurn(BlockBurnEvent event) {
+        if (contains(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    public void handleBlockIgnite(BlockIgniteEvent event) {
+        if (contains(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    public void handlePlayerBucketEmpty(PlayerBucketEmptyEvent event) {
+        if (contains(event.getBlockClicked().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    public void handlePlayerBucketFill(PlayerBucketFillEvent event) {
+        if (contains(event.getBlockClicked().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        out.writeObject(point1.getWorld().getName());
+        out.writeDouble(point1.getX());
+        out.writeDouble(point1.getY());
+        out.writeDouble(point1.getZ());
+        out.writeFloat(point1.getYaw());
+        out.writeFloat(point1.getPitch());
+
+        out.writeObject(point2.getWorld().getName());
+        out.writeDouble(point2.getX());
+        out.writeDouble(point2.getY());
+        out.writeDouble(point2.getZ());
+        out.writeFloat(point2.getYaw());
+        out.writeFloat(point2.getPitch());
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+
+        String worldName1 = (String) in.readObject();
+        double x1 = in.readDouble();
+        double y1 = in.readDouble();
+        double z1 = in.readDouble();
+        float yaw1 = in.readFloat();
+        float pitch1 = in.readFloat();
+        World world1 = Bukkit.getWorld(worldName1);
+        Location point1 = new Location(world1, x1, y1, z1, yaw1, pitch1);
+
+        String worldName2 = (String) in.readObject();
+        double x2 = in.readDouble();
+        double y2 = in.readDouble();
+        double z2 = in.readDouble();
+        float yaw2 = in.readFloat();
+        float pitch2 = in.readFloat();
+        World world2 = Bukkit.getWorld(worldName2);
+        Location point2 = new Location(world2, x2, y2, z2, yaw2, pitch2);
+        java.lang.reflect.Field point1Field;
+        java.lang.reflect.Field point2Field;
+        try {
+            point1Field = Region.class.getDeclaredField("point1");
+            point2Field = Region.class.getDeclaredField("point2");
+            point1Field.setAccessible(true);
+            point2Field.setAccessible(true);
+            point1Field.set(this, point1);
+            point2Field.set(this, point2);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     public static class Pair<A, B> {
         private final A first;
         private final B second;
